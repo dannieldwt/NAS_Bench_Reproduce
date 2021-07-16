@@ -1,0 +1,13 @@
+data_path: null
+dataset: "cifar10" # cifar10 cifar100 ImageNet16-120
+search_space_name: "nas-bench-201"
+max_nodes: 4
+channel: 16
+num_cells: 5
+learning_rate: 0.5
+EMA_momentum: 0.9
+time_budget: 12000
+workers: 4
+arch_nas_dataset: "./bench/NAS-Bench-201-v1_1-096897.pth"
+print_freq: 200
+rand_seed: -1
