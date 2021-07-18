@@ -39,7 +39,7 @@ def main(xargs, nas_bench):
     if xargs.data_path is not None:
         pass
     else:
-        config_path = "./config/reinforce.config"
+        config_path = "config/algo.config"
         config = load_config(config_path, None, logger)
         extra_info = {"config": config, "train_loader": None, "valid_loader": None}
         logger.log("||||||| {:10s} ||||||| Config={:}".format(xargs.dataset, config))
@@ -98,6 +98,7 @@ if __name__ == '__main__':
 
     file = open(args.config_file, 'r', encoding="utf-8")
     config = yaml.load(file)
+    print("config {}".format(config))
     config.save_dir = "./output/{}-{}-{}".format(config.algorithm, config.dataset, config.learning_rate)
     print("config save dir: {}".format(config.save_dir))
 
