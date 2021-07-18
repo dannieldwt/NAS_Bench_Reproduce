@@ -6,6 +6,7 @@ import torch
 import torch.nn as nn
 from torch.distributions import Categorical
 from models.genotypes import Structure as CellStructure
+from algorithm.algo_base import AlgorithmBase
 
 class Policy(nn.module):
     def __init__(self, max_nodes, search_space):
@@ -74,3 +75,36 @@ def select_action(policy):
     action = m.sample()
     # policy.saved_log_probs.append(m.log_prob(action))
     return m.log_prob(action), action.cpu().tolist()
+
+
+class REINFORCE(AlgorithmBase):
+    def __init__(self, xargs, logger):
+        super(REINFORCE, self).__init__()
+        self.args = xargs
+        self.policy = Policy(xargs.max_nodes, xargs.search_sapce)
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=xargs.learning_rate)
+        self.eps = np.finfo(np.float32).eps.item()
+        self.baseline = ExponentialMovingAverage(xargs.EMA_momentum)
+        self.logger = logger
+
+        logger.log("policy    : {:}".format(self.policy))
+        logger.log("optimizer : {:}".format(self.optimizer))
+        logger.log("eps       : {:}".format(self.eps))
+
+    def generate_arch(self):
+        self.log_prob, action = select_action(self.policy)
+        arch = self.policy.generate_arch(action)
+        return arch
+
+    def optimize(self, reward=0):
+        self.baseline.update(reward)
+        # calculate loss
+        policy_loss = (-self.log_prob * (reward - self.baseline.value())).sum()
+        self.optimizer.zero_grad()
+        policy_loss.backward()
+        self.optimizer.step()
+        self.logger.log(
+            "REINFORCE : average-reward={:.3f} : policy_loss={:.4f} : {:}".format(
+                 self.baseline.value(), policy_loss.item(), self.policy.genotype()
+            )
+        )

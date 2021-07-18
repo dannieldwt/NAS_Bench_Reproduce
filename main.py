@@ -15,6 +15,7 @@ from utils.utils import prepare_seed, prepare_logger,\
     load_config, get_search_spaces, train_and_eval, time_string
 from algorithm.reinforce import Policy, select_action, ExponentialMovingAverage
 from nas_201_api import NASBench201API as API
+from algorithm import build_algo
 #
 # api = API('./bench/NAS-Bench-201-v1_1-096897.pth')
 
@@ -45,14 +46,8 @@ def main(xargs, nas_bench):
 
 
     search_space = get_search_spaces("cell", xargs.search_space_name)
-    policy = Policy(xargs.max_nodes, search_space)
-    optimizer = torch.optim.Adam(policy.parameters(), lr=xargs.learning_rate)
-    # optimizer = torch.optim.SGD(policy.parameters(), lr=xargs.learning_rate)
-    eps = np.finfo(np.float32).eps.item()
-    baseline = ExponentialMovingAverage(xargs.EMA_momentum)
-    logger.log("policy    : {:}".format(policy))
-    logger.log("optimizer : {:}".format(optimizer))
-    logger.log("eps       : {:}".format(eps))
+    xargs.search_space = search_space
+    algo = build_algo(xargs, logger)
 
     # nas dataset load
     logger.log("{:} use nas_bench : {:}".format(time_string(), nas_bench))
@@ -65,37 +60,23 @@ def main(xargs, nas_bench):
 
     while total_costs < xargs.time_budget:
         start_time = time.time()
-        log_prob, action = select_action(policy)
-        arch = policy.generate_arch(action)
+        arch = algo.generate_arch()
         reward, cost_time = train_and_eval(arch, nas_bench, extra_info, dataname)
+        algo.optimize(reward)
         trace.append((reward, arch))
         # accumulate time
         if total_costs + cost_time < xargs.time_budget:
             total_costs += cost_time
         else:
             break
-
-        baseline.update(reward)
-        # calculate loss
-        policy_loss = (-log_prob * (reward - baseline.value())).sum()
-        optimizer.zero_grad()
-        policy_loss.backward()
-        optimizer.step()
         # accumulate time
         total_costs += time.time() - start_time
         total_steps += 1
-        logger.log(
-            "step [{:3d}] : average-reward={:.3f} : policy_loss={:.4f} : {:}".format(
-                total_steps, baseline.value(), policy_loss.item(), policy.genotype()
-            )
-        )
-        # logger.log('----> {:}'.format(policy.arch_parameters))
-        # logger.log('')
 
-        # best_arch = policy.genotype() # first version
+
     best_arch = max(trace, key=lambda x: x[0])[1]
     logger.log(
-        "REINFORCE finish with {:} steps and {:.1f} s (real cost={:.3f}).".format(
+        "algorithm {:} finish with {:} steps and {:.1f} s (real cost={:.3f}).".format(xargs.algorithm,
             total_steps, total_costs, time.time() - x_start_time
         )
     )
