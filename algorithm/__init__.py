@@ -1,5 +1,5 @@
 from algorithm.random import Random
-from reinforce import REINFORCE
+from algorithm.reinforce import REINFORCE
 
 
 def build_algo(xargs, logger):
@@ -7,4 +7,5 @@ def build_algo(xargs, logger):
         REINFORCE=REINFORCE,
         RANDOM=Random,
     )
-    return maps[xargs.algorithm](xargs, logger)
+    logger.log("test: {}".format(xargs))
+    return maps[xargs['algorithm']](xargs, logger)

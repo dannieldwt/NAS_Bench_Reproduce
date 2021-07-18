@@ -11,8 +11,8 @@ from algorithm.algo_base import AlgorithmBase
 class Random(AlgorithmBase):
     def __init__(self, xargs, logger):
         super(Random, self).__init__()
-        self.max_nodes = xargs.max_nodes;
-        self.op_names = xargs.search_space;
+        self.max_nodes = xargs['max_nodes']
+        self.op_names = xargs['search_space']
         self.logger = logger
 
 

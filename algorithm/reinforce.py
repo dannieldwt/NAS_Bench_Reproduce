@@ -8,7 +8,7 @@ from torch.distributions import Categorical
 from models.genotypes import Structure as CellStructure
 from algorithm.algo_base import AlgorithmBase
 
-class Policy(nn.module):
+class Policy(nn.Module):
     def __init__(self, max_nodes, search_space):
         super(Policy, self).__init__()
         self.max_nodes = max_nodes
@@ -81,10 +81,10 @@ class REINFORCE(AlgorithmBase):
     def __init__(self, xargs, logger):
         super(REINFORCE, self).__init__()
         self.args = xargs
-        self.policy = Policy(xargs.max_nodes, xargs.search_sapce)
-        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=xargs.learning_rate)
+        self.policy = Policy(xargs['max_nodes'], xargs['search_space'])
+        self.optimizer = torch.optim.Adam(self.policy.parameters(), lr=xargs['learning_rate'])
         self.eps = np.finfo(np.float32).eps.item()
-        self.baseline = ExponentialMovingAverage(xargs.EMA_momentum)
+        self.baseline = ExponentialMovingAverage(xargs['EMA_momentum'])
         self.logger = logger
 
         logger.log("policy    : {:}".format(self.policy))

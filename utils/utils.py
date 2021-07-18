@@ -3,6 +3,7 @@ from os import path as osp
 from shutil import copyfile
 from collections import namedtuple
 import time
+import json
 from nas_201_api import NASBench201API as API
 
 support_types = ("str", "int", "bool", "float", "none")
@@ -18,11 +19,9 @@ def prepare_logger(xargs):
     args = copy.deepcopy(xargs)
     from utils.logger import Logger
 
-    logger = Logger(args.save_dir, args.rand_seed)
+    logger = Logger(args['save_dir'], args['rand_seed'])
     logger.log("Main Function with logger : {:}".format(logger))
     logger.log("Arguments : -------------------------------")
-    for name, value in args._get_kwargs():
-        logger.log("{:16} : {:}".format(name, value))
     logger.log("Python  Version  : {:}".format(sys.version.replace("\n", " ")))
     logger.log("Pillow  Version  : {:}".format(PIL.__version__))
     logger.log("PyTorch Version  : {:}".format(torch.__version__))

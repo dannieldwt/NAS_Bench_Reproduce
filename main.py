@@ -1,3 +1,4 @@
+#coding:utf-8
 # This is a sample Python script.
 
 # Press Shift+F10 to execute it or replace it with your code.
@@ -13,7 +14,6 @@ import random
 
 from utils.utils import prepare_seed, prepare_logger,\
     load_config, get_search_spaces, train_and_eval, time_string
-from algorithm.reinforce import Policy, select_action, ExponentialMovingAverage
 from nas_201_api import NASBench201API as API
 from algorithm import build_algo
 #
@@ -27,26 +27,26 @@ def main(xargs, nas_bench):
     torch.backends.cudnn.enabled = True
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
-    torch.set_num_threads(xargs.workers)
-    prepare_seed(xargs.rand_seed)
+    torch.set_num_threads(xargs['workers'])
+    prepare_seed(xargs['rand_seed'])
     logger = prepare_logger(xargs)
 
-    if xargs.dataset == "cifar10":
+    if xargs['dataset'] == "cifar10":
         dataname = "cifar10-valid" # 为什么要用这个名？
     else:
-        dataname = xargs.dataset
+        dataname = xargs['dataset']
 
-    if xargs.data_path is not None:
+    if xargs['data_path'] is not None:
         pass
     else:
         config_path = "config/algo.config"
         config = load_config(config_path, None, logger)
         extra_info = {"config": config, "train_loader": None, "valid_loader": None}
-        logger.log("||||||| {:10s} ||||||| Config={:}".format(xargs.dataset, config))
+        logger.log("||||||| {:10s} ||||||| Config={:}".format(xargs['dataset'], config))
 
 
-    search_space = get_search_spaces("cell", xargs.search_space_name)
-    xargs.search_space = search_space
+    search_space = get_search_spaces("cell", xargs['search_space_name'])
+    xargs['search_space'] = search_space
     algo = build_algo(xargs, logger)
 
     # nas dataset load
@@ -54,18 +54,18 @@ def main(xargs, nas_bench):
 
     x_start_time = time.time()
     logger.log(
-        "Will start searching with time budget of {:} s.".format(xargs.time_budget)
+        "Will start searching with time budget of {:} s.".format(xargs['time_budget'])
     )
     total_steps, total_costs, trace = 0, 0, []
 
-    while total_costs < xargs.time_budget:
+    while total_costs < xargs['time_budget']:
         start_time = time.time()
         arch = algo.generate_arch()
         reward, cost_time = train_and_eval(arch, nas_bench, extra_info, dataname)
         algo.optimize(reward)
         trace.append((reward, arch))
         # accumulate time
-        if total_costs + cost_time < xargs.time_budget:
+        if total_costs + cost_time < xargs['time_budget']:
             total_costs += cost_time
         else:
             break
@@ -76,7 +76,7 @@ def main(xargs, nas_bench):
 
     best_arch = max(trace, key=lambda x: x[0])[1]
     logger.log(
-        "algorithm {:} finish with {:} steps and {:.1f} s (real cost={:.3f}).".format(xargs.algorithm,
+        "algorithm {:} finish with {:} steps and {:.1f}  (real cost={:.3f}s).".format(xargs['time_budget'],
             total_steps, total_costs, time.time() - x_start_time
         )
     )
@@ -99,26 +99,27 @@ if __name__ == '__main__':
     file = open(args.config_file, 'r', encoding="utf-8")
     config = yaml.load(file)
     print("config {}".format(config))
-    config.save_dir = "./output/{}-{}-{}".format(config.algorithm, config.dataset, config.learning_rate)
-    print("config save dir: {}".format(config.save_dir))
+    print("test: {}".format(config['algorithm']))
+    config['save_dir'] = "./output/{}-{}-{}".format(config['algorithm'], config['dataset'], config['learning_rate'])
+    print("config save dir: {}".format(config['save_dir']))
 
 
     # if args.rand_seed is None or args.rand_seed < 0: args.rand_seed = random.randint(1, 100000)
-    if config.arch_nas_dataset is None or not os.path.isfile(config.arch_nas_dataset):
+    if config['arch_nas_dataset'] is None or not os.path.isfile(config['arch_nas_dataset']):
         nas_bench = None
     else:
         print(
             "{:} build NAS-Benchmark-API from {:}".format(
-                time_string(), config.arch_nas_dataset
+                time_string(), config['arch_nas_dataset']
             )
         )
-        nas_bench = API(args.arch_nas_dataset)
+        nas_bench = API(config['arch_nas_dataset'])
 
-    if config.rand_seed < 0:
+    if config['rand_seed'] < 0:
         save_dir, all_indexes, num = None, [], 500
         for i in range(num):
             print("{:} : {:03d}/{:03d}".format(time_string(), i, num))
-            config.rand_seed = random.randint(1, 100000)
+            config['rand_seed'] = random.randint(1, 100000)
             save_dir, index = main(config, nas_bench)
             all_indexes.append(index)
         torch.save(all_indexes, save_dir / "results.pth")
