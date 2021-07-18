@@ -12,6 +12,4 @@ print_freq: 200
 rand_seed: -1
 
 #setting for algo
-algorithm: REINFORCE
-learning_rate: 0.5
-EMA_momentum: 0.9
+algorithm: RANDOM

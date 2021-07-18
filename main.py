@@ -92,7 +92,7 @@ def main(xargs, nas_bench):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser("The REINFORCE Algorithm")
+    parser = argparse.ArgumentParser("The NAS-BENCH-201 Algorithm")
     parser.add_argument("--config_file", type=str, default='./config/reinforce.yaml', help="config file path")
     args = parser.parse_args()
 
