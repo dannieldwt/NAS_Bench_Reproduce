@@ -7,9 +7,10 @@ search_space_name: "nas-bench-201"
 dataset: "cifar10" # cifar10 cifar100 ImageNet16-120
 data_path: null
 time_budget: 12000
-arch_nas_dataset: "./bench/NAS-Bench-201-v1_1-096897.pth"
+arch_nas_dataset: "../bench/NAS-Bench-201-v1_1-096897.pth"
 print_freq: 200
 rand_seed: -1
 
 #setting for algo
+exp_name: random_500
 algorithm: RANDOM

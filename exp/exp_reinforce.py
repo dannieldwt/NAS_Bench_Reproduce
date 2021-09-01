@@ -4,21 +4,25 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-import torch
 import os
 import numpy as np
 import time
 import yaml
 import argparse
 import random
-
+import torch
+import sys
+parent_path = os.path.realpath('..') # 取决于我python命令的当前目录
+if parent_path not in sys.path:
+    sys.path.append(parent_path)
+    print(sys.path)
 from utils.utils import prepare_seed, prepare_logger,\
     load_config, get_search_spaces, train_and_eval, time_string
 from nas_201_api import NASBench201API as API
-from algorithm import build_algo
 from models.genotypes import Structure as CellStructure
 from torch.distributions import Categorical
 from utils.reinforce.utils import Policy, ExponentialMovingAverage
+from utils.reinforce.controller import Controller
 
 #
 # api = API('./bench/NAS-Bench-201-v1_1-096897.pth')
@@ -79,6 +83,9 @@ def main(xargs, nas_bench):
     )
     total_steps, total_costs, trace = 0, 0, []
     
+    # if xargs['controller'] == 'lstm':
+    #     policy_network = Controller(xargs['max_nodes'], xargs['search_space']) # 输入边数目 和 搜索空间长度
+    # else:
     policy_network = Policy(xargs['max_nodes'], xargs['search_space'])
     policy_optim = torch.optim.Adam(policy_network.parameters(), xargs['learning_rate'])
     policy_baseline = ExponentialMovingAverage(xargs['EMA_momentum'])
@@ -93,7 +100,7 @@ def main(xargs, nas_bench):
         policy_loss.backward()
         policy_optim.step()
         
-        self.logger.log(
+        logger.log(
             "REINFORCE : average-reward={:.3f} : policy_loss={:.4f} : {:}".format(
                  self.baseline.value(), policy_loss.item(), self.policy.genotype()
             )
@@ -127,7 +134,7 @@ def main(xargs, nas_bench):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     parser = argparse.ArgumentParser("The NAS-BENCH-201 Algorithm")
-    parser.add_argument("--config_file", type=str, default='./config/reinforce.yaml', help="config file path")
+    parser.add_argument("--config_file", type=str, default='../config/reinforce/reinforce.yaml', help="config file path")
     args = parser.parse_args()
 
     file = open(args.config_file, 'r', encoding="utf-8")

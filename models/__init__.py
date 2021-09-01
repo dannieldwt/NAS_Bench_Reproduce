@@ -1,4 +1,5 @@
 from utils.utils import dict2config
+from typing import List, Text
 
 def get_cell_based_super_net(config):
     if isinstance(config, dict):
