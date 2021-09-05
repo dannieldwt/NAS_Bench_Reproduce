@@ -86,12 +86,13 @@ def main(xargs, nas_bench):
     )
 
     population = collections.deque()
-    history, total_time_cost = ([], 0,) 
+    history, total_time_cost, total_query = ([], 0, 0) 
     # Initialize the population with random models.
     while len(population) < xargs['ea_population']:
         model = Model()
         model.arch = random_architecture_func(xargs['max_nodes'], xargs['search_space'])
         model.accuracy, time_cost = train_and_eval(model.arch, nas_bench, extra_info, dataname)
+        total_query += 1
         population.append(model)
         history.append(model)
         total_time_cost += time_cost
@@ -112,6 +113,7 @@ def main(xargs, nas_bench):
         print("evaluate before child arch: ", child.arch)
         print("evaluate before nas_bench: ", nas_bench)
         child.accuracy, time_cost = train_and_eval(child.arch, nas_bench, extra_info, dataname)
+        total_query += 1
         if total_time_cost + time_cost > xargs['time_budget']:  
             break
         else:
@@ -122,7 +124,7 @@ def main(xargs, nas_bench):
         # for REA
         population.popleft()
 
-    print("tiao chu xun huan? ")
+    logger.log("algorithm query: {:}".format(total_query))
     logger.log(
         "{:} regularized_evolution finish with history of {:} arch with {:.1f} s (real-cost={:.2f} s).".format(
             time_string(), len(history), total_time_cost, time.time() - x_start_time

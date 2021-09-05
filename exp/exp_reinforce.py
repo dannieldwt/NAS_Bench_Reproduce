@@ -10,8 +10,8 @@ import time
 import yaml
 import argparse
 import random
-import torch
 import sys
+import torch
 parent_path = os.path.realpath('..') # 取决于我python命令的当前目录
 if parent_path not in sys.path:
     sys.path.append(parent_path)
@@ -68,7 +68,7 @@ def main(xargs, nas_bench):
     if xargs['data_path'] is not None:
         pass
     else:
-        config_path = "config/algo.config"
+        config_path = "../config/algo.config"
         config = load_config(config_path, None, logger)
         extra_info = {"config": config, "train_loader": None, "valid_loader": None}
         logger.log("||||||| {:10s} ||||||| Config={:}".format(xargs['dataset'], config))
@@ -81,7 +81,7 @@ def main(xargs, nas_bench):
     logger.log(
         "Will start searching with time budget of {:} s.".format(xargs['time_budget'])
     )
-    total_steps, total_costs, trace = 0, 0, []
+    total_steps, total_costs, trace, total_query = 0, 0, [], 0
     
     # if xargs['controller'] == 'lstm':
     #     policy_network = Controller(xargs['max_nodes'], xargs['search_space']) # 输入边数目 和 搜索空间长度
@@ -94,17 +94,14 @@ def main(xargs, nas_bench):
         log_prob, action = select_action(policy_network)
         arch = policy_network.generate_arch(action)
         reward, cost_time = train_and_eval(arch, nas_bench, extra_info, dataname)
+        total_query += 1
         policy_baseline.update(reward)
         policy_loss = (-log_prob * (reward - policy_baseline.value())).sum()
         policy_optim.zero_grad()
         policy_loss.backward()
         policy_optim.step()
         
-        logger.log(
-            "REINFORCE : average-reward={:.3f} : policy_loss={:.4f} : {:}".format(
-                 self.baseline.value(), policy_loss.item(), self.policy.genotype()
-            )
-        )
+
         trace.append((reward, arch))
         # accumulate time
         if total_costs + cost_time < xargs['time_budget']:
@@ -115,6 +112,7 @@ def main(xargs, nas_bench):
         total_costs += time.time() - start_time
         total_steps += 1
 
+    logger.log("algorithm query: {:}".format(total_query))
     best_arch = max(trace, key=lambda x: x[0])[1]
     logger.log(
         "algorithm {:} finish with {:} steps and {:.1f} s (real cost={:.3f}).".format(xargs['time_budget'],
@@ -141,7 +139,7 @@ if __name__ == '__main__':
     config = yaml.load(file)
     print("config {}".format(config))
     print("test: {}".format(config['algorithm']))
-    config['save_dir'] = "./output/{}-{}-{}".format(config['algorithm'], config['dataset'], config['learning_rate'])
+    config['save_dir'] = "../output/{}-{}-{}".format(config['algorithm'], config['dataset'], config['exp_name'])
     print("config save dir: {}".format(config['save_dir']))
 
 
@@ -157,7 +155,7 @@ if __name__ == '__main__':
         nas_bench = API(config['arch_nas_dataset'])
 
     if config['rand_seed'] < 0:
-        save_dir, all_indexes, num = None, [], 500
+        save_dir, all_indexes, num = None, [], 10
         for i in range(num):
             print("{:} : {:03d}/{:03d}".format(time_string(), i, num))
             config['rand_seed'] = random.randint(1, 100000)

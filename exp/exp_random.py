@@ -74,12 +74,13 @@ def main(xargs, nas_bench):
     logger.log(
         "Will start searching with time budget of {:} s.".format(xargs['time_budget'])
     )
-    total_steps, total_costs, trace = 0, 0, []
+    total_steps, total_costs, trace, total_query = 0, 0, [], 0
 
     while total_costs < xargs['time_budget']:
         start_time = time.time()
         arch = generate_arch(xargs['max_nodes'], xargs['search_space'])
         reward, cost_time = train_and_eval(arch, nas_bench, extra_info, dataname)
+        total_query += 1
         trace.append((reward, arch))
         # accumulate time
         if total_costs + cost_time < xargs['time_budget']:
@@ -90,6 +91,7 @@ def main(xargs, nas_bench):
         total_costs += time.time() - start_time
         total_steps += 1
 
+    logger.log("algorithm query: {:}".format(total_query))
     best_arch = max(trace, key=lambda x: x[0])[1]
     logger.log(
         "algorithm {:} finish with {:} steps and {:.1f} s (real cost={:.3f}).".format(xargs['time_budget'],
