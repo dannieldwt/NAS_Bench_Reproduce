@@ -12,5 +12,5 @@ print_freq: 200
 rand_seed: -1
 
 #setting for algo
-exp_name: random_500
+exp_name: random_500_query
 algorithm: RANDOM

@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 from torch.distributions import Categorical
 from models.genotypes import Structure as CellStructure
-from algorithm.algo_base import AlgorithmBase
 
 class Policy(nn.Module):
     def __init__(self, max_nodes, search_space):

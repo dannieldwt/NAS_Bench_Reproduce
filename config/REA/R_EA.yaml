@@ -10,10 +10,10 @@ time_budget: 12000
 arch_nas_dataset: "../bench/NAS-Bench-201-v1_1-096897.pth"
 config_path: "../config/algo.config"
 print_freq: 200
-rand_seed: 100
+rand_seed: -1
 
 #setting for algo
-exp_name: REA_500
+exp_name: REA_500_query
 algorithm: R_EA
 ea_cycles: 200
 ea_population: 10

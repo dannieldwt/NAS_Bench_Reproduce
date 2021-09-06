@@ -7,11 +7,13 @@ search_space_name: "nas-bench-201"
 dataset: "cifar10" # cifar10 cifar100 ImageNet16-120
 data_path: null
 time_budget: 12000
-arch_nas_dataset: "./bench/NAS-Bench-201-v1_1-096897.pth"
+arch_nas_dataset: "../bench/NAS-Bench-201-v1_1-096897.pth"
+config_path: "../config/algo.config"
 print_freq: 200
 rand_seed: -1
 
 #setting for algo
+exp_name: REINFORCE_query
 algorithm: REINFORCE
 learning_rate: 0.5
 EMA_momentum: 0.9
