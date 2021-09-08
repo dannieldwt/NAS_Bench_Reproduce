@@ -13,7 +13,7 @@ print_freq: 200
 rand_seed: -1
 
 #setting for algo
-exp_name: REINFORCE_query
+exp_name: REINFORCE_debug
 algorithm: REINFORCE
 learning_rate: 0.5
 EMA_momentum: 0.9

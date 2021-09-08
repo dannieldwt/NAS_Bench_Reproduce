@@ -61,7 +61,7 @@ def main(xargs, nas_bench):
 
     # step 2 : 加载数据集和配置
     if xargs['dataset'] == "cifar10":
-        dataname = "cifar10-valid" # 为什么要用这个名？
+        dataname = "cifar10-valid" # 为什么要用这个名？ 得用valid集
     else:
         dataname = xargs['dataset']
 
@@ -119,6 +119,22 @@ def main(xargs, nas_bench):
             total_steps, total_costs, time.time() - x_start_time
         )
     )
+
+    best_index = nas_bench.query_index_by_arch(best_arch)
+    best_valid_metrics = nas_bench.get_more_info(
+        best_arch, dataname, iepoch=None, hp="200", is_random=True
+    )
+    best_test_metrics = nas_bench.get_more_info(
+        best_arch, "cifar10", iepoch=None, hp="200", is_random=True
+    )
+    # best_valid_acc = best_metrics["valid-accuracy"]
+    logger.log("look at the output type for metric info: {:}".format(type(best_valid_metrics)))
+    logger.log(best_valid_metrics)
+    logger.log("look at the output type for metric info: {:}".format(type(best_test_metrics)))
+    logger.log(best_test_metrics)
+    best_valid_acc = best_valid_metrics['valid-accuracy']
+    best_test_acc = best_test_metrics['test-accuracy']
+
     info = nas_bench.query_by_arch(best_arch, "200")
     if info is None:
         logger.log("Did not find this architecture : {:}.".format(best_arch))
@@ -126,7 +142,7 @@ def main(xargs, nas_bench):
         logger.log("{:}".format(info))
     logger.log("-" * 100)
     logger.close()
-    return logger.log_dir, nas_bench.query_index_by_arch(best_arch)
+    return logger.log_dir, best_index, best_valid_acc, best_test_acc, total_query
 
 
 # Press the green button in the gutter to run the script.
@@ -155,12 +171,17 @@ if __name__ == '__main__':
         nas_bench = API(config['arch_nas_dataset'])
 
     if config['rand_seed'] < 0:
-        save_dir, all_indexes, num = None, [], 10
+        save_dir, all_indexes, num, valid_total, test_total, query_total = None, [], 500, 0, 0, 0
         for i in range(num):
             print("{:} : {:03d}/{:03d}".format(time_string(), i, num))
             config['rand_seed'] = random.randint(1, 100000)
-            save_dir, index = main(config, nas_bench)
+            save_dir, index, valid, test, query = main(config, nas_bench)
+            valid_total += valid
+            test_total += test
+            query_total += query
             all_indexes.append(index)
+        print("Average accuracy for cifar10: {:} for valid and {:} for test and query {:}"
+        .format(valid_total / num, test_total / num, query_total / num))
         torch.save(all_indexes, save_dir / "results.pth")
     else:
         main(config, nas_bench)
