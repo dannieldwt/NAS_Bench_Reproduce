@@ -17,5 +17,5 @@ exp_name: REA_500_query
 algorithm: R_EA
 ea_cycles: 200
 ea_population: 10
-ea_sample_size: 3
+ea_sample_size: 10
 ea_fast_by_api: 1 #这个参数是？
