@@ -17,11 +17,11 @@ python ./exp/file.py --config_file configFilePath
    原论文没有发现确切的lr是多少，但根据附录的lr图，lr < 0.2时整体数值和论文数值贴近。
 
 # Reinforce
-| Auto DL (12000s)|  | ours (12000s) | paper (12000s) | ours lr 0.1 (12000s) | ours steps 500 |
+| Auto DL (12000s)|  ours (12000s) | paper (12000s) | ours lr 0.1 (12000s) | ours steps 500 |
 | ----------- | ----------- | ----------- | ----------- | ----------- |
 | 90.20 / 93.12  |  90.27 / 93.19  |  | 91.09 / 93.85 | 91.14 / 93.97 | 90.45 / 93.35 |
 
 # REA
-| Auto DL (12000s)|  | ours sample 3 (12000s) | ours sample 10 (12000s) | paper (12000s) |
+| Auto DL (12000s)|  ours sample 3 (12000s) | ours sample 10 (12000s) | paper (12000s) |
 | ----------- | ----------- | ----------- | ----------- |
 | 91.02 / 93.80  |  90.93 / 93.70  |  | 91.23 / 93.99 | 91.19 / 93.92 |
