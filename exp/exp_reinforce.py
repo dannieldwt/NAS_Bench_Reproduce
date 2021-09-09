@@ -90,6 +90,7 @@ def main(xargs, nas_bench):
     policy_optim = torch.optim.Adam(policy_network.parameters(), xargs['learning_rate'])
     policy_baseline = ExponentialMovingAverage(xargs['EMA_momentum'])
     while total_costs < xargs['time_budget']:
+    # for istep in range(xargs["RL_steps"]):
         start_time = time.time()
         log_prob, action = select_action(policy_network)
         arch = policy_network.generate_arch(action)
