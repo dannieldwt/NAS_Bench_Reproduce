@@ -1,0 +1,20 @@
+# setting for search space
+max_nodes: 4
+channel: 16
+num_cells: 5
+workers: 4
+search_space_name: "nas-bench-201"
+dataset: "cifar10" # cifar10 cifar100 ImageNet16-120
+data_path: null
+time_budget: 12000
+arch_nas_dataset: "../bench/NAS-Bench-201-v1_1-096897.pth"
+config_path: "../config/algo.config"
+print_freq: 200
+rand_seed: -1
+
+#setting for algo
+exp_name: REINFORCE_RL_steps
+algorithm: REINFORCE
+learning_rate: 0.01
+EMA_momentum: 0.9
+RL_steps: 500

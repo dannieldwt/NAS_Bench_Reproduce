@@ -2,11 +2,28 @@ import os, sys, torch, random, PIL, copy, numpy as np
 from os import path as osp
 from shutil import copyfile
 from collections import namedtuple
+from copy import deepcopy
+from PIL import Image
 import time
 import json
+import torchvision.datasets as dset
+import torchvision.transforms as transforms
+import torch.utils.data as data
 from nas_201_api import NASBench201API as API
 
 support_types = ("str", "int", "bool", "float", "none")
+
+Dataset2Class = {
+    "cifar10": 10,
+    "cifar100": 100,
+    "imagenet-1k-s": 1000,
+    "imagenet-1k": 1000,
+    "ImageNet16": 1000,
+    "ImageNet16-150": 150,
+    "ImageNet16-120": 120,
+    "ImageNet16-200": 200,
+}
+
 
 def prepare_seed(rand_seed):
     random.seed(rand_seed)
@@ -100,17 +117,21 @@ def load_config(path, extra, logger):
     if hasattr(logger, "log"):
         logger.log(path)
     assert os.path.exists(path), "Can not find {:}".format(path)
+
     # Reading data back
     with open(path, "r") as f:
         data = json.load(f)
     content = {k: convert_param(v) for k, v in data.items()}
+
     assert extra is None or isinstance(
         extra, dict
     ), "invalid type of extra : {:}".format(extra)
     if isinstance(extra, dict):
         content = {**content, **extra}
+
     Arguments = namedtuple("Configure", " ".join(content.keys()))
     content = Arguments(**content)
+
     if hasattr(logger, "log"):
         logger.log("{:}".format(content))
     return content
@@ -199,3 +220,60 @@ def time_string():
     ISOTIMEFORMAT = "%Y-%m-%d %X"
     string = "[{:}]".format(time.strftime(ISOTIMEFORMAT, time.gmtime(time.time())))
     return string
+
+def dict2config(xdict, logger):
+    assert isinstance(xdict, dict), "invalid type : {:}".format(type(xdict))
+    Arguments = namedtuple("Configure", " ".join(xdict.keys()))
+    content = Arguments(**xdict)
+    if hasattr(logger, "log"):
+        logger.log("{:}".format(content)) 
+    return content
+
+def convert_secs2time(epoch_time, return_str=False):
+    need_hour = int(epoch_time / 3600)
+    need_mins = int((epoch_time - 3600 * need_hour) / 60)
+    need_secs = int(epoch_time - 3600 * need_hour - 60 * need_mins)
+    if return_str:
+        str = "[{:02d}:{:02d}:{:02d}]".format(need_hour, need_mins, need_secs)
+        return str
+    else:
+        return need_hour, need_mins, need_secs
+
+def obtain_accuracy(output, target, topk=(1,)):
+    """Computes the precision@k for the specified values of k"""
+    maxk = max(topk)
+    batch_size = target.size(0)
+
+    _, pred = output.topk(maxk, 1, True, True)
+    pred = pred.t()
+    correct = pred.eq(target.view(1, -1).expand_as(pred))
+
+    res = []
+    for k in topk:
+        correct_k = correct[:k].view(-1).float().sum(0, keepdim=True)
+        res.append(correct_k.mul_(100.0 / batch_size))
+    return res
+
+    
+class AverageMeter(object):
+    """Computes and stores the average and current value"""
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0.0
+        self.avg = 0.0
+        self.sum = 0.0
+        self.count = 0.0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
+    def __repr__(self):
+        return "{name}(val={val}, avg={avg}, count={count})".format(
+            name=self.__class__.__name__, **self.__dict__
+        )
