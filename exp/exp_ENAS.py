@@ -11,21 +11,15 @@ import time
 import yaml
 import argparse
 import random
-from ..models.model.enas_controller import Controller
 import numpy as np
 from copy import deepcopy
 import torch.nn as nn
+
 from utils.utils import prepare_seed, prepare_logger,\
     load_config, get_search_spaces, time_string, \
     dict2config, convert_secs2time, AverageMeter, obtain_accuracy
-from utils.dataset_utils import get_datasets, get_nas_search_loaders
-from nas_201_api import NASBench201API as API
-from algorithm import build_algo
-from ..models import get_cell_based_super_net, get_search_spaces
-from ..utils.optimize import get_optim_scheduler
-
-#
-# api = API('./bench/NAS-Bench-201-v1_1-096897.pth')
+from controller.enas_controller import Controller
+from dataset.searchDataset import get_nas_search_loaders, get_datasets
 
 # Suppose you are trying to load pre-trained resnet model in directory- models\resnet
 os.environ['TORCH_HOME'] = '/mnt/cephfs/home/dengweitao/codes/NAS_Bench_201/dataset'
@@ -261,7 +255,7 @@ def valid_func(xloader, network, criterion):
     return arch_losses.avg, arch_top1.avg, arch_top5.avg
 
 
-def main(xargs, nas_bench):
+def main(xargs):
     #step 1: 加载配置 
     assert torch.cuda.is_available(), "CUDA is not available."
     torch.backends.cudnn.enabled = True
@@ -271,34 +265,22 @@ def main(xargs, nas_bench):
     prepare_seed(xargs['rand_seed'])
     logger = prepare_logger(xargs)
 
-
     # step 2 : 加载数据集
-    logger.log("*********************load dataset************************")
     train_data, test_data, xshape, class_num = get_datasets(xargs['dataset'], xargs['data_path'], -1)
-
-    logger.log("use config from : {:}".format(xargs['config_path']))
     config = load_config(
         xargs['config_path'], {"class_num": class_num, "xshape": xshape}, logger
     )
-
     _, train_loader, valid_loader = get_nas_search_loaders(
         train_data,
         test_data,
         xargs["dataset"],
-        "../config/", # 注意路径修改
+        "../config", # todo: 注意路径修改
         config.batch_size,
         xargs["workers"],
     )
-
     valid_loader.dataset.transform = deepcopy(train_loader.dataset.transform)
     if hasattr(valid_loader.dataset, "transforms"):
         valid_loader.dataset.transforms = deepcopy(train_loader.dataset.transforms)
-
-    logger.log(
-        "||||||| {:10s} ||||||| Train-Loader-Num={:}, Valid-Loader-Num={:}, batch size={:}".format(
-            xargs["dataset"], len(train_loader), len(valid_loader), config.batch_size
-        )
-    )
 
     # step 3: 搭建搜索空间
     search_space = get_search_spaces("cell", xargs['search_space_name'])
@@ -318,21 +300,15 @@ def main(xargs, nas_bench):
     )
     shared_cnn = get_cell_based_super_net(model_config)
     controller = shared_cnn.create_controller()
-
     w_optimizer, w_scheduler, criterion = get_optim_scheduler(
         shared_cnn.parameters(), config
     )
-
     a_optimizer = torch.optim.Adam(
         controller.parameters(),
         lr=config.controller_lr,
         betas=config.controller_betas,
         eps=config.controller_eps,
     )
-
-    # flop, param  = get_model_infos(shared_cnn, xshape)
-    # logger.log('{:}'.format(shared_cnn))
-    # logger.log('FLOP = {:.2f} M, Params = {:.2f} MB'.format(flop, param))
     if xargs['arch_nas_dataset'] is None:
         api = None
     else:
@@ -349,7 +325,6 @@ def main(xargs, nas_bench):
         logger.path("model"),
         logger.path("best"),
     )
-
     if last_info.exists():  # automatically resume from previous checkpoint
         logger.log(
             "=> loading checkpoint of the last-info '{:}' start".format(last_info)
@@ -540,14 +515,4 @@ if __name__ == '__main__':
     if config['rand_seed'] is None or config['rand_seed'] < 0:
         args.rand_seed = random.randint(1, 100000)
 
-    if config['arch_nas_dataset'] is None or not os.path.isfile(config['arch_nas_dataset']):
-        nas_bench = None
-    else:
-        print(
-            "{:} build NAS-Benchmark-API from {:}".format(
-                time_string(), config['arch_nas_dataset']
-            )
-        )
-        nas_bench = API(config['arch_nas_dataset'])
-
-    main(config, nas_bench)
+    main(config)
