@@ -4,7 +4,6 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
-import torch
 import os
 import numpy as np
 import time
@@ -13,7 +12,14 @@ import argparse
 import random
 import numpy as np
 from copy import deepcopy
+import torch
 import torch.nn as nn
+
+import sys
+parent_path = os.path.realpath('..')  # 取决于python命令的当前目录
+if parent_path not in sys.path:
+    sys.path.append(parent_path)
+    print(sys.path)
 
 from utils.utils import prepare_seed, prepare_logger,\
     load_config, get_search_spaces, time_string, \
@@ -507,10 +513,12 @@ def main(xargs):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    os.environ["CUDA_VISIBLE_DEVICES"] = '3'
     parser = argparse.ArgumentParser("The NAS-BENCH-201 Algorithm")
-    parser.add_argument("--config_file", type=str, default='./config/ENAS/ENAS.yaml', help="config file path")
+    parser.add_argument("--config_file", type=str, default='../config/ENAS/ENAS.yaml', help="config file path")
     args = parser.parse_args()
     config = load_yaml_config(args.config_file)
+    config['data_path'] = os.environ['TORCH_HOME'] + "/" + config['data_path']
 
     if config['rand_seed'] is None or config['rand_seed'] < 0:
         args.rand_seed = random.randint(1, 100000)

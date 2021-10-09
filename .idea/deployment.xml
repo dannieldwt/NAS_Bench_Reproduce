@@ -2,21 +2,14 @@
 <project version="4">
   <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
-      <paths name="dengweitao@222.201.187.246:22 password">
+      <paths name="dengweitao@222.201.187.246:22 password (2)">
         <serverdata>
           <mappings>
             <mapping deploy="/mnt/cephfs/home/dengweitao/codes/NAS_Bench_201" local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
-      <paths name="dengweitao@gpu020:22 password">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="dengweitao@gpu020:22 password (1)">
+      <paths name="dengweitao@gpu010 password">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
