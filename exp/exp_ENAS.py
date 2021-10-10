@@ -14,6 +14,8 @@ import numpy as np
 from copy import deepcopy
 import torch
 import torch.nn as nn
+import ssl
+ssl._create_default_https_context = ssl._create_unverified_context
 
 import sys
 parent_path = os.path.realpath('..')  # 取决于python命令的当前目录
@@ -21,11 +23,14 @@ if parent_path not in sys.path:
     sys.path.append(parent_path)
     print(sys.path)
 
+from nas_201_api import NASBench201API as API
 from utils.utils import prepare_seed, prepare_logger,\
     load_config, get_search_spaces, time_string, \
     dict2config, convert_secs2time, AverageMeter, obtain_accuracy
+from utils.optimize import get_optim_scheduler
 from controller.enas_controller import Controller
 from dataset.searchDataset import get_nas_search_loaders, get_datasets
+from searchSpace import get_cell_based_tiny_net
 
 # Suppose you are trying to load pre-trained resnet model in directory- models\resnet
 os.environ['TORCH_HOME'] = '/mnt/cephfs/home/dengweitao/codes/NAS_Bench_201/dataset'
@@ -38,7 +43,7 @@ def load_yaml_config(file_path):
 
 def train_super_net(
     xloader,
-    super_net,
+    shared_cnn,
     controller,
     criterion,
     scheduler,
@@ -54,27 +59,28 @@ def train_super_net(
         AverageMeter(),
         time.time(),
     )
-    super_net.train()
+
+    shared_cnn.train()
     controller.eval()
 
-    for step, (input, target) in enumerate(xloader):
-        scheduler.update(None, 1.0 * step / len(xloader)) #参数格式？
-        target = target.cuda(non_blocking=True)
-        data_time.update(time.time() - xend)  
+    for step, (inputs, targets) in enumerate(xloader):
+        scheduler.update(None, 1.0 * step / len(xloader))
+        targets = targets.cuda(non_blocking=True)
+        # measure data loading time
+        data_time.update(time.time() - xend)
 
         with torch.no_grad():
-            _, _, sample_arch = controller()
+            _, _, sampled_arch = controller()
 
         optimizer.zero_grad()
-        super_net.module.update_arch(sampled_arch)
-        _, logits = super_net(input) #返回值格式？
-        loss = criterion(logits, target)
+        shared_cnn.module.update_arch(sampled_arch)
+        _, logits = shared_cnn(inputs)
+        loss = criterion(logits, targets)
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(super_net.parameters(), 5) #作用？
+        torch.nn.utils.clip_grad_norm_(shared_cnn.parameters(), 5)
         optimizer.step()
-
         # record
-        prec1, prec5 = obtain_accuracy(logits.data, targets.data, topk=(1, 5)) # 该函数定义？
+        prec1, prec5 = obtain_accuracy(logits.data, targets.data, topk=(1, 5))
         losses.update(loss.item(), inputs.size(0))
         top1s.update(prec1.item(), inputs.size(0))
         top5s.update(prec5.item(), inputs.size(0))
@@ -85,9 +91,9 @@ def train_super_net(
 
         if step % print_freq == 0 or step + 1 == len(xloader):
             Sstr = (
-                "*Train-Shared-CNN* "
-                + time_string()
-                + " [{:}][{:03d}/{:03d}]".format(epoch_str, step, len(xloader))
+                    "*Train-Shared-CNN* "
+                    + time_string()
+                    + " [{:}][{:03d}/{:03d}]".format(epoch_str, step, len(xloader))
             )
             Tstr = "Time {batch_time.val:.2f} ({batch_time.avg:.2f}) Data {data_time.val:.2f} ({data_time.avg:.2f})".format(
                 batch_time=batch_time, data_time=data_time
@@ -109,6 +115,8 @@ def train_controller(
     print_freq,
     logger,
 ):
+    # config. (containing some necessary arg)
+    #   baseline: The baseline score (i.e. average val_acc) from the previous epoch
     data_time, batch_time = AverageMeter(), AverageMeter()
     (
         GradnormMeter,
@@ -133,7 +141,7 @@ def train_controller(
     controller.zero_grad()
     # for step, (inputs, targets) in enumerate(xloader):
     loader_iter = iter(xloader)
-    for step in range(config.ctl_train_steps * config.ctl_num_aggre):  #两个参数的意义？
+    for step in range(config.ctl_train_steps * config.ctl_num_aggre):
         try:
             inputs, targets = next(loader_iter)
         except:
@@ -149,12 +157,12 @@ def train_controller(
             _, logits = shared_cnn(inputs)
             val_top1, val_top5 = obtain_accuracy(logits.data, targets.data, topk=(1, 5))
             val_top1 = val_top1.view(-1) / 100
-        reward = val_top1 + config.ctl_entropy_w * entropy # 用加的？ 注意是计算reward not loss
+        reward = val_top1 + config.ctl_entropy_w * entropy
         if config.baseline is None:
             baseline = val_top1
         else:
             baseline = config.baseline - (1 - config.ctl_bl_dec) * (
-                config.baseline - reward
+                    config.baseline - reward
             )
 
         loss = -1 * log_prob * (reward - baseline)
@@ -181,11 +189,11 @@ def train_controller(
 
         if step % print_freq == 0:
             Sstr = (
-                "*Train-Controller* "
-                + time_string()
-                + " [{:}][{:03d}/{:03d}]".format(
-                    epoch_str, step, config.ctl_train_steps * config.ctl_num_aggre
-                )
+                    "*Train-Controller* "
+                    + time_string()
+                    + " [{:}][{:03d}/{:03d}]".format(
+                epoch_str, step, config.ctl_train_steps * config.ctl_num_aggre
+            )
             )
             Tstr = "Time {batch_time.val:.2f} ({batch_time.avg:.2f}) Data {data_time.val:.2f} ({data_time.avg:.2f})".format(
                 batch_time=batch_time, data_time=data_time
@@ -304,7 +312,7 @@ def main(xargs):
         },
         None,
     )
-    shared_cnn = get_cell_based_super_net(model_config)
+    shared_cnn = get_cell_based_tiny_net(model_config)
     controller = shared_cnn.create_controller()
     w_optimizer, w_scheduler, criterion = get_optim_scheduler(
         shared_cnn.parameters(), config
@@ -521,6 +529,6 @@ if __name__ == '__main__':
     config['data_path'] = os.environ['TORCH_HOME'] + "/" + config['data_path']
 
     if config['rand_seed'] is None or config['rand_seed'] < 0:
-        args.rand_seed = random.randint(1, 100000)
+        config['rand_seed'] = random.randint(1, 100000)
 
     main(config)

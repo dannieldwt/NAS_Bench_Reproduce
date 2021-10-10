@@ -9,7 +9,22 @@ import torchvision.transforms as transforms
 import torch.utils.data as data
 from nas_201_api import NASBench201API as API
 
+from utils.utils import prepare_seed, prepare_logger,\
+    load_config, get_search_spaces, time_string, \
+    dict2config, convert_secs2time, AverageMeter, obtain_accuracy
+
 __all__ = ['get_datasets', 'get_nas_search_loaders']
+
+Dataset2Class = {
+    "cifar10": 10,
+    "cifar100": 100,
+    "imagenet-1k-s": 1000,
+    "imagenet-1k": 1000,
+    "ImageNet16": 1000,
+    "ImageNet16-150": 150,
+    "ImageNet16-120": 120,
+    "ImageNet16-200": 200,
+}
 
 class CUTOUT(object):
     def __init__(self, length):
