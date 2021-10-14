@@ -26,7 +26,7 @@ if parent_path not in sys.path:
 from nas_201_api import NASBench201API as API
 from utils.utils import prepare_seed, prepare_logger,\
     load_config, get_search_spaces, time_string, \
-    dict2config, convert_secs2time, AverageMeter, obtain_accuracy
+    dict2config, convert_secs2time, AverageMeter, obtain_accuracy, save_checkpoint, copy_checkpoint
 from utils.optimize import get_optim_scheduler
 from controller.enas_controller import Controller
 from dataset.searchDataset import get_nas_search_loaders, get_datasets

@@ -42,12 +42,32 @@ SearchSpaceNames = {
 
 
 class ReLUConvBN(nn.Module):
-    def __init__(self, C_in, C_out, kernel_size, stride, padding, dilation, affine, track_running_stats=True):
+    def __init__(
+        self,
+        C_in,
+        C_out,
+        kernel_size,
+        stride,
+        padding,
+        dilation,
+        affine,
+        track_running_stats=True,
+    ):
         super(ReLUConvBN, self).__init__()
         self.op = nn.Sequential(
-            nn.ReLU(inplace=True),
-            nn.Conv2d(C_in, C_out, kernel_size, stride=stride, padding=padding, dilation=dilation, bias=not affine),
-            nn.BatchNorm2d(C_out, affine=affine, track_running_stats=track_running_stats)
+            nn.ReLU(inplace=False),
+            nn.Conv2d(
+                C_in,
+                C_out,
+                kernel_size,
+                stride=stride,
+                padding=padding,
+                dilation=dilation,
+                bias=not affine,
+            ),
+            nn.BatchNorm2d(
+                C_out, affine=affine, track_running_stats=track_running_stats
+            ),
         )
 
     def forward(self, x):
